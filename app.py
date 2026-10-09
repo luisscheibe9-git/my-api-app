@@ -1,11 +1,11 @@
-import os
+﻿import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 from google import genai
 
 load_dotenv()
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 app = Flask(__name__)
 
