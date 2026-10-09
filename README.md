@@ -1,13 +1,13 @@
-# my-api-app: Pokédex for Anything (Gemini)
+﻿# my-api-app: Code Buddy (Gemini)
 
-Small Flask app that calls Google's Gemini API (free tier).
+Beginner programming tutor. Flask server calls Google's Gemini API (free tier).
 
-- `app.py` is the server and the only place the key is used
-- `templates/index.html` is the page
-- `.env` holds `GEMINI_API_KEY` (git-ignored, never commit)
+- `app.py`: server, the only place the key is used. `/api/ask` handles explain / code / example modes
+- `templates/index.html`: page with quick examples, concept chips, and an ask box
+- `.env`: holds `GEMINI_API_KEY` (git-ignored, never commit)
 
 ## Run
-1. Get a key at https://aistudio.google.com/apikey and paste it into `.env` after `GEMINI_API_KEY=`
+1. Get a key at https://aistudio.google.com/apikey and put it in `.env` as `GEMINI_API_KEY=...`
 2. `pip install -r requirements.txt`
 3. `python app.py`, then open http://localhost:5050
 

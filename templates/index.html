@@ -3,39 +3,110 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pokédex for Anything</title>
+<title>Code Buddy</title>
 <style>
-  body { font-family: system-ui, sans-serif; background: #c0392b; margin: 0; padding: 24px; }
-  main { max-width: 520px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 24px; }
-  h1 { margin-top: 0; }
-  input { width: 100%; padding: 10px; font-size: 16px; box-sizing: border-box; }
-  button { margin-top: 10px; padding: 10px 18px; font-size: 16px; cursor: pointer; }
-  pre { white-space: pre-wrap; font-family: inherit; background: #f4f4f4; padding: 14px; border-radius: 8px; }
-  .err { color: #c0392b; }
+  :root { --bg:#0f172a; --card:#1e293b; --ink:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --code:#020617; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 24px 16px 60px; }
+  main { max-width: 760px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; } h2 { font-size: 1.05rem; margin: 28px 0 10px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select, input, button { font: inherit; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: var(--card); color: var(--ink); }
+  input { flex: 1; min-width: 200px; }
+  button { cursor: pointer; background: var(--accent); color: #082f49; border: 0; font-weight: 600; }
+  button.ghost { background: var(--card); color: var(--ink); border: 1px solid #334155; font-weight: 400; }
+  button:hover { filter: brightness(1.1); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border-radius: 12px; padding: 14px; }
+  .card h3 { margin: 0 0 8px; font-size: .95rem; }
+  pre { background: var(--code); padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; font-size: .85rem; }
+  code { font-family: ui-monospace, Consolas, monospace; }
+  p code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  #out { background: var(--card); border-radius: 12px; padding: 14px 16px; margin-top: 16px; min-height: 60px; line-height: 1.55; }
+  #out:empty { display: none; }
+  .err { color: #fca5a5; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Pokédex for Anything</h1>
-  <input id="thing" placeholder="e.g. my roommate, a burrito, Cal Poly" autofocus>
-  <button id="go">Scan it</button>
-  <pre id="out"></pre>
+  <h1>Code Buddy</h1>
+  <p class="sub">Learn programming in small bites. Pick a language, try an example, or ask anything.</p>
+
+  <div class="row">
+    <label for="lang">Language:</label>
+    <select id="lang">
+      <option>Python</option><option>JavaScript</option><option>Java</option><option>C</option>
+    </select>
+  </div>
+
+  <h2>Quick examples <span style="color:var(--muted);font-weight:400">(Python shown; click Explain for your language)</span></h2>
+  <div class="cards" id="cards"></div>
+
+  <h2>Concepts</h2>
+  <div class="chips" id="chips"></div>
+
+  <h2>Ask or build something</h2>
+  <div class="row">
+    <input id="text" placeholder="e.g. what is a loop?  /  write code that checks if a number is even">
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button id="explain">Explain it</button>
+    <button id="code" class="ghost">Write the code</button>
+  </div>
+
+  <div id="out"></div>
 </main>
+
 <script>
-  const out = document.getElementById("out");
-  async function scan() {
-    const thing = document.getElementById("thing").value;
-    out.className = ""; out.textContent = "Scanning...";
-    const r = await fetch("/api/entry", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({thing})
-    });
+const EXAMPLES = [
+  {t: "Print something", c: 'print("Hello, world!")'},
+  {t: "Variables", c: 'name = "Sam"\nage = 20\nprint(name, "is", age)'},
+  {t: "Loop", c: 'for i in range(1, 4):\n    print("Count:", i)'},
+  {t: "If / else", c: 'n = 7\nif n % 2 == 0:\n    print("even")\nelse:\n    print("odd")'},
+  {t: "Function", c: 'def greet(name):\n    return "Hi, " + name\n\nprint(greet("Alex"))'},
+  {t: "List", c: 'fruits = ["apple", "banana"]\nfruits.append("kiwi")\nprint(fruits[0], len(fruits))'},
+];
+const CONCEPTS = ["Variables", "Loops", "Functions", "If statements", "Lists / arrays", "Strings", "What is a bug?", "What is an API?", "Recursion", "Classes and objects"];
+
+const $ = id => document.getElementById(id);
+const out = $("out");
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function render(md) {
+  const parts = md.split(/```/);
+  return parts.map((p, i) => {
+    if (i % 2) return "<pre><code>" + esc(p.replace(/^[^\n]*\n/, "")) + "</code></pre>";
+    return esc(p).split(/\n{2,}/).map(x =>
+      "<p>" + x.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\n/g,"<br>") + "</p>"
+    ).join("");
+  }).join("");
+}
+
+async function ask(mode, text) {
+  if (!text.trim()) return;
+  out.className = ""; out.textContent = "Thinking...";
+  out.scrollIntoView({behavior: "smooth", block: "nearest"});
+  try {
+    const r = await fetch("/api/ask", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({mode, text, lang: $("lang").value})});
     const j = await r.json();
     if (j.error) { out.className = "err"; out.textContent = j.error; }
-    else out.textContent = j.text;
-  }
-  document.getElementById("go").onclick = scan;
-  document.getElementById("thing").addEventListener("keydown", e => { if (e.key === "Enter") scan(); });
+    else out.innerHTML = render(j.text);
+  } catch (e) { out.className = "err"; out.textContent = "Could not reach the server."; }
+}
+
+$("cards").innerHTML = EXAMPLES.map((e, i) =>
+  `<div class="card"><h3>${e.t}</h3><pre><code>${esc(e.c)}</code></pre><button data-i="${i}">Explain this</button></div>`).join("");
+$("cards").onclick = e => { const i = e.target.dataset.i; if (i !== undefined) ask("example", EXAMPLES[i].c); };
+
+$("chips").innerHTML = CONCEPTS.map(c => `<button class="ghost">${c}</button>`).join("");
+$("chips").onclick = e => { if (e.target.tagName === "BUTTON") ask("explain", e.target.textContent); };
+
+$("explain").onclick = () => ask("explain", $("text").value);
+$("code").onclick = () => ask("code", $("text").value);
+$("text").addEventListener("keydown", e => { if (e.key === "Enter") ask("explain", $("text").value); });
 </script>
 </body>
 </html>
