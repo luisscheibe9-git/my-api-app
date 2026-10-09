@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pokédex for Anything</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #c0392b; margin: 0; padding: 24px; }
+  main { max-width: 520px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 24px; }
+  h1 { margin-top: 0; }
+  input { width: 100%; padding: 10px; font-size: 16px; box-sizing: border-box; }
+  button { margin-top: 10px; padding: 10px 18px; font-size: 16px; cursor: pointer; }
+  pre { white-space: pre-wrap; font-family: inherit; background: #f4f4f4; padding: 14px; border-radius: 8px; }
+  .err { color: #c0392b; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pokédex for Anything</h1>
+  <input id="thing" placeholder="e.g. my roommate, a burrito, Cal Poly" autofocus>
+  <button id="go">Scan it</button>
+  <pre id="out"></pre>
+</main>
+<script>
+  const out = document.getElementById("out");
+  async function scan() {
+    const thing = document.getElementById("thing").value;
+    out.className = ""; out.textContent = "Scanning...";
+    const r = await fetch("/api/entry", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({thing})
+    });
+    const j = await r.json();
+    if (j.error) { out.className = "err"; out.textContent = j.error; }
+    else out.textContent = j.text;
+  }
+  document.getElementById("go").onclick = scan;
+  document.getElementById("thing").addEventListener("keydown", e => { if (e.key === "Enter") scan(); });
+</script>
+</body>
+</html>
